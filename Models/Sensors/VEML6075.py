@@ -39,7 +39,7 @@
 # Guía de estilos aplicada: PEP8
 
 # #           Descripción           # #
-# Clase para obtener datos y modelo de datos para DB con el sensor veml6070
+# Clase para obtener datos y modelo de datos para DB con el sensor veml6075
 # Sensor rayos UV
 # Esta clase puede funcionar de forma autónoma, aún así también es extendida
 # por clases hijas para seccionar el tipo de resultado obtenido y tratarse de
@@ -63,20 +63,24 @@ _REV_ID      = 0x0C
 _VEML6075_UV_IT = { 50: 0x00, 100: 0x01, 200: 0x02, 400: 0x03, 800: 0x04 }
 
 class VEML6075:
+    """
+    https://cdn-learn.adafruit.com/assets/assets/000/062/586/medium800/adafruit_products_image.png?1537992961
+    """
     def __init__(
             self,
             i2c,
             debug=False,
-            integration_time=100,
-            high_dynamic= True,
+            integration_time=50,
+            high_dynamic= False, # Puede ser impreciso, dar valores negativos
             uva_a_coef= 2.22,
             uva_b_coef= 1.33,
             uvb_c_coef= 2.95,
             uvb_d_coef= 1.74,
-            uva_response= 0.001461,
-            uvb_response= 0.002591 ):
-
-        print('VEML6075 Update: ', 3)
+            uva_response= 0.002919, # 25mm teflon, 10mm window
+            uvb_response= 0.009389 # 25mm teflon, 10mm window
+            #uva_response= 0.001461, # Open Air
+            #uvb_response= 0.002591 # Open Air
+            ):
 
         self.i2c = i2c
 
@@ -108,7 +112,9 @@ class VEML6075:
 
     def _take_reading(self):
         """Perform a full reading and calculation of all UV calibrated values"""
+
         time.sleep(0.1)
+
         uva = self._read_register(_REG_UVA)
         uvb = self._read_register(_REG_UVB)
         #dark = self._read_register(_REG_DARK)
@@ -119,6 +125,7 @@ class VEML6075:
         self._uvbcalc = uvb - (self._c * uvcomp1) - (self._d * uvcomp2)
         #print("UVA = %d, UVB = %d, UVcomp1 = %d, UVcomp2 = %d, Dark = %d" %
         #      (uva, uvb, uvcomp1, uvcomp2, dark))
+
 
     @property
     def uva(self):

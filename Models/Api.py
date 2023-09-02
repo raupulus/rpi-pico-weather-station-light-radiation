@@ -4,21 +4,22 @@
 import urequests, gc
 import ujson
 from time import sleep
+import json
 
 gc.enable()
 
 class Api():
-    def __init__(self, controller, sensors, url, path, token, debug=False):
+    def __init__(self, controller, url, path, token, debug=False):
         self.URL = url
         self.TOKEN = token
         self.URL_PATH = path
         self.CONTROLLER = controller
-        self.SENSORS = sensors
         self.DEBUG = debug
 
     def upload(self, datas):
         if self.DEBUG:
             print('Api Uploading...')
+            print('Datas: ', datas)
 
         if self.CONTROLLER.wifiIsConnected() == False:
             return False
@@ -29,6 +30,7 @@ class Api():
         token = self.TOKEN
 
         headers = {
+            #'Content-type': 'form-data; charset=utf-8',
             'Content-type': 'application/json',
             'Accept': 'application/json',
             'Authorization': 'Bearer ' + str(token),
@@ -38,7 +40,9 @@ class Api():
             response = urequests.post(
                 full_url,
                 headers=headers,
-                json=ujson.dumps(datas),
+                data=(json.dumps(datas)).encode(),
+                #data=datas,
+                #json=ujson.dumps(datas),
                 timeout=3
             )
 

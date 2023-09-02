@@ -1,5 +1,5 @@
 from Models.RpiPico import RpiPico
-#from Models.Api import Api
+from Models.Api import Api
 from time import sleep, time
 
 from Models.Sensors.BH1750 import BH1750
@@ -8,15 +8,14 @@ from Models.Sensors.VEML6075 import VEML6075
 # Importo variables de entorno
 import env
 
-# Instancia de la api
-#api = Api(controller, channelSensors, env.API_URL, env.API_PATH, env.API_TOKEN, debug=env.DEBUG)
-
 # Tiempo entre subidas API en segundos
-INTERVAL_API_UPLOAD = 30
+INTERVAL_API_UPLOAD = 54
 
 # Momento de la última subida a la api.
 last_upload_at = time()
 
+# Id de dispositivo
+hardware_device_id = env.DEVICE_ID
 
 # Rpi Pico Model
 if env.UPLOAD_API and env.AP_NAME and env.AP_PASS:
@@ -24,69 +23,72 @@ if env.UPLOAD_API and env.AP_NAME and env.AP_PASS:
 else:
     controller = RpiPico(debug=env.DEBUG)
 
-"""
-print('')
-print('Scan i2c bus...')
-devices = controller.i2c_0.scan()
+# Instancia de la api
+api = Api(controller, env.API_URL, env.API_PATH, env.API_TOKEN, debug=env.DEBUG)
 
-if len(devices) == 0:
-    print("No i2c device !")
-else:
-    print('i2c devices found:',len(devices))
-
-for device in devices:
-    print("Decimal address: ",device," | Hexa address: ",hex(device))
-
-print('Scan i2c bus... OK')
-print('')
-"""
-
+sleep(1)
 
 sol = BH1750(i2c=controller.i2c_0, addr=0x23, debug=env.DEBUG)
+
 sleep(1)
+
 uv = VEML6075(i2c=controller.i2c_0, debug=env.DEBUG)
+
 sleep(1)
 
+def loop():
+    global last_upload_at
 
-def main():
     while True:
         if env.DEBUG:
             print('')
             print('.')
             print('')
 
-
         lux = sol.measurement
+        sleep(1)
         lumens = sol.get_lumens(lux)
-        uv_index = uv.uv_index
+        sleep(1)
+        index = uv.uv_index
+        sleep(1)
         uva = uv.uva
         uvb = uv.uvb
 
-        # Muestro lux obtenidos
-        print('Lux: ', lux)
-        print('Lumens: ', lumens)
-        print('uv_index: ', uv_index)
-        print('uva: ', uva)
-        print('uvb: ', uvb)
+        # Muestro datos obtenidos
+        if env.DEBUG:
+            print('hardware_device_id: ', hardware_device_id)
+            print('Lux: ', lux)
+            print('Lumens: ', lumens)
+            print('uv_index: ', index)
+            print('uva: ', uva)
+            print('uvb: ', uvb)
 
-        sleep(1)
+        # Subo a la api
+        if env.UPLOAD_API and time() - last_upload_at > INTERVAL_API_UPLOAD:
+            last_upload_at = time()
 
+            api.upload({
+                'hardware_device_id': hardware_device_id,
+                'lux': lux,
+                'lumens': lumens,
+                'uv_index': index,
+                'uva': uva,
+                'uvb': uvb
+            })
 
-        """
+            sleep(50)
+            #machine.deepsleep(50000)
+        else:
+            sleep(1)
 
-        sol.power(on=True)     # Sensor Of Lux
-        sol.set_mode(continuously=True, high_resolution=True)
-        sol.measurement_accuracy = 1.0      # default value
-        old_lux = curr_max = 1.0
-
-        for lux in sol:
-            if lux != old_lux:
-                curr_max = max(lux, curr_max)
-                lt = time.localtime()
-                print(f"{lt[3:6]}\tIllumination [lux]: {lux}.\tmax: {curr_max}.\tNormalized [%]: {100*lux/curr_max}.")
-            old_lux = lux
-            time.sleep_ms(sol.get_conversion_cycle_time())
-        """
-
+def main():
+    while True:
+        try:
+            loop()
+        except Exception as e:
+            if env.DEBUG:
+                print('Error: ', e)
+        finally:
+            sleep(10)
 
 main()

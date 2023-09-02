@@ -190,7 +190,8 @@ class RpiPico():
 
     def wifiDisconnect(self):
         """ Disconnect from wifi"""
-        self.wifi.disconnect()
+        if self.wifi and self.wifiIsConnected():
+            self.wifi.disconnect()
 
     def readAnalogInput(self, pin):
         """
@@ -217,3 +218,19 @@ class RpiPico():
 
         return self.voltage_working - ((reading / 65535) * self.voltage_working)
         # return (reading / 65535) * self.voltage_working
+
+    def scanI2C(self):
+        print('')
+        print('Scan i2c bus...')
+        devices = self.i2c_0.scan()
+
+        if len(devices) == 0:
+            print("No i2c device !")
+        else:
+            print('i2c devices found:',len(devices))
+
+        for device in devices:
+            print("Decimal address: ",device," | Hexa address: ",hex(device))
+
+        print('Scan i2c bus... OK')
+        print('')
