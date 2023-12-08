@@ -8,8 +8,8 @@ from Models.Sensors.VEML6075 import VEML6075
 # Importo variables de entorno
 import env
 
-# Tiempo entre subidas API en segundos
-INTERVAL_API_UPLOAD = 54
+# Tiempo entre subidas API en segundos, también utilizado para dormir
+INTERVAL_API_UPLOAD = 288
 
 # Momento de la última subida a la api.
 last_upload_at = time()
@@ -39,47 +39,46 @@ sleep(1)
 def loop():
     global last_upload_at
 
-    while True:
-        if env.DEBUG:
-            print('')
-            print('.')
-            print('')
+    if env.DEBUG:
+        print('')
+        print('.')
+        print('')
 
-        lux = sol.measurement
+    controller.ledOn()
+
+    lux = sol.measurement
+    sleep(0.5)
+    lumens = sol.get_lumens(lux)
+    sleep(0.5)
+    index = uv.uv_index
+    sleep(0.2)
+    uva = uv.uva
+    uvb = uv.uvb
+
+    # Muestro datos obtenidos
+    if env.DEBUG:
+        print('hardware_device_id: ', hardware_device_id)
+        print('Lux: ', lux)
+        print('Lumens: ', lumens)
+        print('uv_index: ', index)
+        print('uva: ', uva)
+        print('uvb: ', uvb)
         sleep(1)
-        lumens = sol.get_lumens(lux)
-        sleep(1)
-        index = uv.uv_index
-        sleep(1)
-        uva = uv.uva
-        uvb = uv.uvb
 
-        # Muestro datos obtenidos
-        if env.DEBUG:
-            print('hardware_device_id: ', hardware_device_id)
-            print('Lux: ', lux)
-            print('Lumens: ', lumens)
-            print('uv_index: ', index)
-            print('uva: ', uva)
-            print('uvb: ', uvb)
+    # Subo a la api
+    api.upload({
+        'hardware_device_id': hardware_device_id,
+        'lux': lux,
+        'lumens': lumens,
+        'uv_index': index,
+        'uva': uva,
+        'uvb': uvb
+    })
 
-        # Subo a la api
-        if env.UPLOAD_API and time() - last_upload_at > INTERVAL_API_UPLOAD:
-            last_upload_at = time()
+    last_upload_at = time()
 
-            api.upload({
-                'hardware_device_id': hardware_device_id,
-                'lux': lux,
-                'lumens': lumens,
-                'uv_index': index,
-                'uva': uva,
-                'uvb': uvb
-            })
+    controller.ledOff()
 
-            sleep(50)
-            #machine.deepsleep(50000)
-        else:
-            sleep(1)
 
 def main():
     while True:
@@ -89,6 +88,10 @@ def main():
             if env.DEBUG:
                 print('Error: ', e)
         finally:
-            sleep(10)
+            if env.DEBUG:
+                print('Durmiendo Microcontrolador')
+                sleep(INTERVAL_API_UPLOAD)
+            else:
+                controller.deepsleep(INTERVAL_API_UPLOAD)
 
 main()

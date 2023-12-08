@@ -1,5 +1,5 @@
 
-from machine import ADC, I2C, Pin
+from machine import ADC, I2C, Pin, deepsleep
 import network
 from time import sleep
 
@@ -15,7 +15,7 @@ class RpiPico():
     current = 0
     locked = False
 
-    i2c_0 = I2C(0, sda=Pin(20), scl=Pin(21), freq=400000)
+    i2c_0 = I2C(0, sda=Pin(4), scl=Pin(5), freq=400000)
     #i2c_1 = I2C(0, sda=Pin(20), scl=Pin(21), freq=400000)
 
     # Wireless
@@ -192,6 +192,8 @@ class RpiPico():
         """ Disconnect from wifi"""
         if self.wifi and self.wifiIsConnected():
             self.wifi.disconnect()
+            self.wifi.active(False)
+            Pin(23,Pin.OUT).low()
 
     def readAnalogInput(self, pin):
         """
@@ -234,3 +236,11 @@ class RpiPico():
 
         print('Scan i2c bus... OK')
         print('')
+
+    def deepsleep(self, seconds):
+        """
+        Entra en modo sueño profundo durante los segundos recibidos.
+        Para evitar problemas al entrar en el modo, se necesita desactivar el wireless primero.
+        """
+        self.wifiDisconnect()
+        deepsleep(seconds * 1000)

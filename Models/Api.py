@@ -43,7 +43,7 @@ class Api():
                 data=(json.dumps(datas)).encode(),
                 #data=datas,
                 #json=ujson.dumps(datas),
-                timeout=3
+                timeout=10
             )
 
         except Exception as e:
